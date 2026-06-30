@@ -9,13 +9,14 @@ import pandas as pd
 import time
 embeddings = OllamaEmbeddings(model="mxbai-embed-large")
 
-def vectorize_2(acts_storage,pubs_storage,proj_path):
+def vectorize_2(acts_storage,pubs_storage,roc_storage,proj_path):
 
     acts_csv_path = acts_storage / 'csv' / 'updated_acts.csv'
     pubs_csv_path = pubs_storage / 'csv' / 'publications.csv'
 
     acts_md_path = acts_storage / 'md' / 'from_txt' 
     pubs_md_path = pubs_storage / 'md' / 'from_txt'
+    roc_md_path = roc_storage / 'md' / 'from_pdf'
 
     acts_csv = pd.read_csv(acts_csv_path)
     pubs_csv = pd.read_csv(pubs_csv_path)
@@ -77,6 +78,19 @@ def vectorize_2(acts_storage,pubs_storage,proj_path):
 
     print("=====Finished Loading Publications=====")
 
+    roc_files = listdir(roc_md_path)
+    for e in range(len(roc_files)):
+        md_file = roc_files[e]
+        roc_md = roc_md_path / md_file
+        with open(roc_md, "r", encoding="utf-8") as txt_extract:
+            documents.append(
+                Document(
+                    page_content=txt_extract.read(),
+                    metadata={"source": md_file, 
+                    }
+                )
+            )
+
     vector_store = Chroma(
         collection_name="constitution_collection",
         embedding_function=embeddings,
@@ -105,7 +119,8 @@ def main():
     proj_path = home_dir / 'Desktop' / 'Library' / 'Projects' / 'Constitution RAG'
     acts_storage = proj_path / 'Acts Storage'
     pubs_storage = proj_path / 'Publications Storage'
-    vectorize_2(acts_storage=acts_storage,pubs_storage=pubs_storage,proj_path=proj_path)
+    roc_storage = proj_path / 'Rules of Court Storage'
+    vectorize_2(acts_storage=acts_storage,pubs_storage=pubs_storage,roc_storage=roc_storage,proj_path=proj_path)
 
 
 if __name__ == "__main__":
