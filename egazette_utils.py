@@ -1,6 +1,5 @@
 import requests
-from bs4 import BeautifulSoup
-import json
+import argparse
 from pathlib import Path
 import csv
 import pandas as pd
@@ -29,13 +28,13 @@ def gazette_url_grabber(PAGE_NUMBER:int,PAGE_SIZE:int):
         raise EOFError
     return url_dict
 
-def pub_csv_writer():
-    PAGE_NUMBER=41
+def pub_csv_writer(csv_path):
+    PAGE_NUMBER=0
     try:
         while True:
             PAGE_NUMBER+=1
             csv_dict = gazette_url_grabber(PAGE_NUMBER=PAGE_NUMBER,PAGE_SIZE=12)
-            with open("publications.csv", "a", newline="",encoding="utf-8") as pub_csv:
+            with open(csv_path, "a", newline="",encoding="utf-8") as pub_csv:
                 fieldnames = ["name","title","downloadUrl"]
                 writer = csv.DictWriter(pub_csv, fieldnames=fieldnames)
                 for e in range(len(csv_dict["downloadUrl"])):
@@ -57,7 +56,7 @@ def dl_pub_pdfs(csv_path,pub_storage):
         # for chunk in response_pdf.iter_content(chunk_size=8192):
         #     if chunk:
         #         print(chunk)
-        pdf_path = pub_storage / f"{pub_csv.name[e]}.pdf"
+        pdf_path = pub_storage / f"{pub_csv.name[e]}"
         with open(pdf_path,"wb") as f:
             f.write(response_pdf.content)
         print(f"====={pub_csv.title[e]} Done! ({e}/{len(pub_csv.downloadUrl)})=====")
@@ -82,7 +81,7 @@ def pub_pdf_ocr(csv_path,pub_storage):
     pdf_folder = pub_storage / 'pdfs'
     txt_path = pub_storage / 'txts'
     # pdf_path = pdf_folder / pub_csv.name[0]
-    for e in range(595,len(pub_csv.name)):
+    for e in range(len(pub_csv.name)):
         try:
             pdf_path = pdf_folder / pub_csv.name[e]
             options = OcrOptions(
@@ -102,9 +101,9 @@ def pub_pdf_ocr(csv_path,pub_storage):
                 f.write(ERROR_MESSAGE)
                 print(ERROR_MESSAGE)
                 pass
-            ...
-    ... 
-    ## The files were accidentally name .pdf.pdf so this script renamed them
+            
+    
+    ## The files were accidentally named .pdf.pdf so this script renamed them
     # pdfs = [e for e in listdir(pdf_folder) if e.endswith(".pdf.pdf")]
     # print(len(pdfs))
     # for e in range(len(pdfs)):
@@ -127,20 +126,54 @@ def pub_pdf_ocr(csv_path,pub_storage):
     #         print(e)
     #         break
 
+def get_sys_args():
+    parser = argparse.ArgumentParser(
+        prog='Gazette Webscraper and Parser',
+        description='Webscrapes the API for the official egazette website for Guyana and parses the information into a csv',
+        epilog='Note: You can path to the home directory by inputing the tilde or \'~\' symbol. For Example: ~/path/to/your/pdffolder ~/path/to/your/csv')
+    
+
+    parser.add_argument('pubs_folder')
+    parser.add_argument('csv_path')
+    parser.add_argument('-f', '--full', action='store_true')
+    parser.add_argument('-d', '--download', action='store_true')
+    parser.add_argument('-o', '--ocr', action='store_true')
+    parser.add_argument('-t', '--txt', action='store_true')
+    parser.add_argument('-c', '--csvwriter', action='store_true')
+
+    args = parser.parse_args()
+    
+    return {"publications folder": Path(args.pubs_folder).expanduser(),
+            "csv path": Path(args.csv_path).expanduser(),
+            "is_full": args.full,
+            "is_dl": args.download,
+            "is_ocr": args.ocr,
+            "is_txt": args.txt,
+            "is_csvwriter": args.csvwriter
+    }
+
+
+
 def main():
-    # session = requests.Session()
-    # session.headers.update({
-    #     "User-Agent": "Mozilla/5.0",
-    #     "Accept": "application/json"
-    #     }
-    # )
-    home_dir = Path.home()
-    project_path = home_dir / 'Desktop' / 'Library' / 'Projects' / 'Constitution RAG'
-    pub_storage = project_path / 'Publications Storage'
-    csv_path = pub_storage / 'csv' / 'publications.csv'
-    pub_pdf_ocr(csv_path=csv_path,pub_storage=pub_storage)
-    # pub_pypdf(csv_path=csv_path,pub_storage=pub_storage)
-    # dl_pub_pdfs(csv_path=csv_path,pub_storage=pub_storage)
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json"
+        }
+    )
+
+    args = get_sys_args()
+    csv_path = args["csv path"]
+    pub_storage = args["publications folder"]
+
+    if args["is_full"] is True or args ["is_csvwriter"] is True:
+        pub_csv_writer(csv_path=csv_path)
+    if args["is_full"] is True or args["is_dl"] is True:
+        dl_pub_pdfs(csv_path=csv_path,pub_storage=pub_storage)
+    if args["is_full"] is True or args["is_ocr"] is True:
+        pub_pdf_ocr(csv_path=csv_path,pub_storage=pub_storage)
+    if args["is_full"] is True or args["is_txt"] is True:
+        pub_pypdf(csv_path=csv_path,pub_storage=pub_storage)
 
 if __name__ == "__main__":
     main()
