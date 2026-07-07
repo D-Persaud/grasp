@@ -6,27 +6,22 @@ from pathlib import Path
 import pandas as pd
 import time
 
-def store_acts(csv_path,batch_folder_path,batch_format,file_encoding,):
+
+def store_publications(csv_path,batch_folder_path,batch_format,file_encoding,):
 
     documents = []
 
     csv = pd.read_csv(csv_path)
-    for index in range(len(csv.act_chapter)):
-        act_name = csv.act_name[index]
-        act_number = csv.act_chapter[index]
-        act_description = csv.act_description[index]
-
-        batch_file = act_number.replace(":","-") + batch_format
+    for index in range(len(csv.name)):
+        batch_file = csv.name[index].replace(".pdf",batch_format)
         batch_path = batch_folder_path / batch_file
         with open(batch_path, "r", encoding=file_encoding) as batch_extract:
             documents.append(
                 Document(
                     page_content=batch_extract.read(),
                     metadata={
-                        "source": batch_file, 
-                        "act name": act_name,
-                        "act number": act_number,
-                        "act description": act_description,
+                        "source": batch_file,
+                        "publication title": csv.title[index]
                     }
                 )
             )
@@ -35,7 +30,7 @@ def store_acts(csv_path,batch_folder_path,batch_format,file_encoding,):
     
     return documents
 
-def vectorize_acts(documents,embedding_model,collection_name,persist_directory,chunk_size,chunk_overlap,batch_size,batch_starting_range):
+def vectorize_publications(documents,embedding_model,collection_name,persist_directory,chunk_size,chunk_overlap,batch_size,batch_starting_range):
 
     embeddings = OllamaEmbeddings(model=embedding_model)
     vector_store = Chroma(
@@ -65,19 +60,19 @@ def vectorize_acts(documents,embedding_model,collection_name,persist_directory,c
 def main():
     # Defining Paths
     home_dir = Path.home()
-    acts_storage_path = home_dir / 'Desktop' / 'Library' / 'Projects' / 'Constitution RAG' / 'Acts Storage'
-    csv_path = acts_storage_path / 'csv' / 'updated_acts.csv'
-    txt_folder_path = acts_storage_path / 'txts'
+    pubs_storage_path = home_dir / 'Desktop' / 'Library' / 'Projects' / 'Constitution RAG' / 'Publications Storage'
+    csv_path = pubs_storage_path / 'csv' / 'publications.csv'
+    txt_folder_path = pubs_storage_path / 'txts'
 
-    vectorize_acts(
-        documents=store_acts(
+    vectorize_publications(
+        documents=store_publications(
             csv_path=csv_path,
             batch_folder_path=txt_folder_path,
             batch_format=".txt",
             file_encoding="utf-8"
         ),
         embedding_model="mxbai-embed-large",
-        collection_name="constitution_acts_collection",
+        collection_name="gazette_collection",
         persist_directory="./chroma_langchain_db_txts",
         chunk_size=1000,
         chunk_overlap=200,
