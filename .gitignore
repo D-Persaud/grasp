@@ -1,0 +1,10 @@
+__pycache__/
+Acts Storage/
+Publications Storage/
+Rules of Court Storage/
+chroma_langchain_db_const/
+chroma_langchain_db_txts/
+test_langchain_chroma_db/
+Guyana_RAG_eval.xlsx
+.venv/
+*.pyc
